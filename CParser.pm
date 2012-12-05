@@ -28,7 +28,8 @@ sub new {
 		includes => [],
 		statics => [],
 		extern => [],
-		typedefs_macros => [],
+		typedefs => [],
+		macros => [],
 		funcs => undef,
 	};
 	bless $self, $pkg;
@@ -88,6 +89,14 @@ sub scanbraces {
 	}
 }
 
+sub strip_macro {
+	my $x = shift;
+	$x =~ s/^\s*//;
+	$x =~ s/\s*$//;
+	$x =~ s/\s+/ /g;
+	return $x;
+}
+
 sub parseline {
 	my $self = shift;
 	$_ = shift;
@@ -98,7 +107,7 @@ sub parseline {
 	if(/^\s*#\s*(\w+)/) {
 		my $kw = $1;
 		if($kw eq "if" || $kw eq "ifdef" || $kw eq "elif" || $kw eq "else" || $kw eq "endif") {
-			push @{$self->{typedefs_macros}}, $_;
+			push @{$self->{macros}}, strip_macro($_);
 			return;
 		}
 #		$self->{line} = "" if $self->{isheader};
@@ -121,7 +130,7 @@ sub parseline {
 			if($self->{line} =~ /\\\s*$/) {
 
 			} else {
-				push @{$self->{typedefs_macros}}, $self->{line};
+				push @{$self->{macros}}, strip_macro($self->{line});
 				$self->{line} = ""
 			}
 		} elsif($self->{line} =~ /([;\}]{1})\s*\n*$/) {
@@ -132,9 +141,17 @@ sub parseline {
 					$self->{line} =~ s/^\s*static\s*//;
 					push @{$self->{extern}}, $self->{line};
 				} elsif($self->{isheader}) {
-					$self->handlesub($self->{line});
+					if(
+						$self->{line} =~ /^\s*typedef\s+/
+						|| $self->{line} =~ /^\s*union\s+/
+						|| $self->{line} =~ /^\s*struct\s+/
+					) {
+						push @{$self->{typedefs}}, strip_macro($self->{line});
+					} else {
+						$self->handlesub($self->{line});
+					}
 				} else {
-					push @{$self->{typedefs_macros}}, $self->{line};
+					push @{$self->{typedefs}}, $self->{line};
 				}
 				$self->{line} = "";
 				return;
@@ -179,7 +196,6 @@ sub parse {
 		}
 	}
 	close $f;
-
 }
 
 1;
