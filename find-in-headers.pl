@@ -11,6 +11,8 @@ use Data::Dump qw(dump);
 my $file = $ARGV[0] or die ("need filename");
 my $dir = $ARGV[1] or die ("need dir with headers as second arg");
 
+#print "processing $file\n";
+
 my $p = CParser->new($file);
 $p->parse();
 
